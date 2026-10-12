@@ -34,6 +34,9 @@ TRAIN_LAST_SEASON = 30
 VAL_LAST_SEASON = 37
 # Last season in the data (46) has no "next season", so it can't be labelled.
 LAST_LABELLED_SEASON = 45
+# First season predicted in the walk-forward threshold search (needs enough
+# past seasons to train on).
+FIRST_OOT_SEASON = 21
 
 C_GRID = [0.01, 0.1, 1.0, 10.0]  # sklearn regularization strength (inverse)
 LR_GRID = [0.05, 0.5]            # learning rates tried for the PyTorch versions
@@ -48,7 +51,8 @@ def load_tables():
     casts = pd.read_csv(DATA / "casts.csv")
     appearances = pd.read_csv(DATA / "appearances.csv")
     titles = pd.read_csv(DATA / "titles.csv")
-    return casts, appearances, titles
+    episodes = pd.read_csv(DATA / "episodes.csv")
+    return casts, appearances, titles, episodes
 
 
 def build_target(casts):
@@ -76,7 +80,7 @@ def per_episode(df, counts, name):
     return df
 
 
-def build_features(df, appearances, titles):
+def build_features(df, appearances, titles, episodes):
     df = df.sort_values(["aid", "sid"]).copy()
 
     # --- Role / status -----------------------------------------------------
@@ -132,6 +136,18 @@ def build_features(df, appearances, titles):
     # Season 1 has no past seasons; 0.5 stands for "no information".
     df["recent_renewal_rate"] = df["recent_renewal_rate"].fillna(0.5)
 
+    # Share of the person's appearances that fell in the second half of the
+    # season. Below 0.5 = they were used less as the season went on, which
+    # could be an early sign of being phased out. Still only uses data from
+    # the season itself, so it is known at the end-of-season decision.
+    eps = episodes[["epid", "sid", "epno"]].copy()
+    eps["season_len"] = eps.groupby("sid")["epno"].transform("max")
+    eps["second_half"] = eps["epno"] > eps["season_len"] / 2
+    halves = cast.merge(eps[["epid", "second_half"]], on="epid", how="left")
+    share = halves.groupby(keys)["second_half"].mean().rename("second_half_share")
+    df = df.merge(share, on=keys, how="left")
+    df["second_half_share"] = df["second_half_share"].fillna(0.5)
+
     # Change vs. their own previous season (0 in a first season).
     prev = df.groupby("aid")["apps_relative"].shift(1)
     df["apps_relative_change"] = (df["apps_relative"] - prev).fillna(0)
@@ -144,7 +160,8 @@ FEATURE_GROUPS = {
     "role": ["featured", "update_anchor", "joined_mid_season"],
     "tenure": ["prior_seasons", "stuck_featured"],
     "screen_time": ["apps_relative", "apps_relative_change",
-                    "cold_open_per_episode", "update_per_episode"],
+                    "cold_open_per_episode", "update_per_episode",
+                    "second_half_share"],
     "characters": ["log_characters", "log_impressions"],
     "context": ["cast_size", "recent_renewal_rate"],
 }
@@ -335,8 +352,8 @@ def main():
     MODELS.mkdir(exist_ok=True)
     ARTIFACTS.mkdir(exist_ok=True)
 
-    casts, appearances, titles = load_tables()
-    df = build_features(build_target(casts), appearances, titles)
+    casts, appearances, titles, episodes = load_tables()
+    df = build_features(build_target(casts), appearances, titles, episodes)
     train, val, test = split(df)
     print(f"rows: train={len(train)} val={len(val)} test={len(test)}")
     print(f"renewal rate: train={train[TARGET].mean():.2f} "
@@ -366,13 +383,43 @@ def main():
     best_lr = min(lr_scores, key=lr_scores.get)
     print(f"chosen lr={best_lr}")
 
-    # Final models, all on the same training data.
-    sk = fit_sklearn(X_tr, y_tr, best_C)
-    manual, manual_losses = fit_manual_torch(X_tr, y_tr, best_C, best_lr)
-    module, module_losses = fit_torch_module(X_tr, y_tr, best_C, best_lr)
+    # 3) Decision threshold from rolling ("walk-forward") predictions.
+    #    Validation alone has only 13 departures, so a threshold picked there
+    #    is very noisy. Instead, for every season s from FIRST_OOT_SEASON to
+    #    the end of validation, fit on seasons < s and predict season s, as
+    #    if we were standing at the end of season s-1. Pooling those
+    #    out-of-time predictions gives ~100 departures to set the threshold
+    #    on, and never uses test.
+    oot_y, oot_p = [], []
+    for s in range(FIRST_OOT_SEASON, VAL_LAST_SEASON + 1):
+        past, now = df[df["sid"] < s], df[df["sid"] == s]
+        sc = StandardScaler().fit(past[FEATURES].to_numpy(dtype=float))
+        Xp, yp = to_arrays(past, sc)
+        Xn, yn = to_arrays(now, sc)
+        oot_p.append(fit_sklearn(Xp, yp, best_C).predict_proba(Xn)[:, 1])
+        oot_y.append(yn)
+    oot_y, oot_p = np.concatenate(oot_y), np.concatenate(oot_p)
+    threshold = best_threshold(oot_y, oot_p)
+    print(f"walk-forward: {len(oot_y)} rows, {int((oot_y == 0).sum())} departures, "
+          f"AUC={roc_auc_score(oot_y, oot_p):.3f}")
+    print(f"chosen threshold on P(renewed)={threshold} "
+          f"(cost ratio {COST_MISSED_DEPARTURE}:{COST_FALSE_ALARM})")
 
-    # Naive baseline: always predict the training renewal rate.
-    base_rate = float(y_tr.mean())
+    # 4) Final models: refit on train + val (seasons 1-37), now that C, lr and
+    #    the threshold are fixed. The extra seasons are the most recent ones
+    #    before test, so throwing them away would waste the most relevant
+    #    data. All three implementations use exactly the same rows.
+    dev = df[df["sid"] <= VAL_LAST_SEASON]
+    scaler = StandardScaler().fit(dev[FEATURES].to_numpy(dtype=float))
+    X_dev, y_dev = to_arrays(dev, scaler)
+    X_te, y_te = to_arrays(test, scaler)
+
+    sk = fit_sklearn(X_dev, y_dev, best_C)
+    manual, manual_losses = fit_manual_torch(X_dev, y_dev, best_C, best_lr)
+    module, module_losses = fit_torch_module(X_dev, y_dev, best_C, best_lr)
+
+    # Naive baseline: always predict the renewal rate seen in seasons 1-37.
+    base_rate = float(y_dev.mean())
 
     def all_preds(X):
         return {
@@ -382,22 +429,13 @@ def main():
             "torch_module": predict_module(module, X),
         }
 
-    # 3) Decision threshold: cheapest on validation, then applied unchanged to
-    #    test. Picking it on test would make the test cost look better than it
-    #    will be in practice.
-    p_va = all_preds(X_va)
-    threshold = best_threshold(y_va, p_va["sklearn"])
-    print(f"chosen threshold on P(renewed)={threshold} "
-          f"(cost ratio {COST_MISSED_DEPARTURE}:{COST_FALSE_ALARM})")
-
-    metrics = {}
-    for name, (X, y) in {"val": (X_va, y_va), "test": (X_te, y_te)}.items():
-        preds = all_preds(X)
-        metrics[name] = {
-            "threshold_0.5": {m: evaluate(y, p, 0.5) for m, p in preds.items()},
-            "chosen_threshold": {m: evaluate(y, p, threshold)
-                                 for m, p in preds.items()},
-        }
+    # Test is touched once, here, with everything already decided.
+    preds = all_preds(X_te)
+    metrics = {"test": {
+        "threshold_0.5": {m: evaluate(y_te, p, 0.5) for m, p in preds.items()},
+        "chosen_threshold": {m: evaluate(y_te, p, threshold)
+                             for m, p in preds.items()},
+    }}
 
     for key in ["threshold_0.5", "chosen_threshold"]:
         print(f"\nTest set, {key}")
@@ -448,6 +486,7 @@ def main():
             "chosen_C": best_C,
             "chosen_lr": best_lr,
             "chosen_threshold": threshold,
+            "final_model_trained_on": "train + val (seasons 1-37)",
             "cost_missed_departure": COST_MISSED_DEPARTURE,
             "cost_false_alarm": COST_FALSE_ALARM,
             "val_log_loss_by_C": {str(k): v for k, v in val_scores.items()},

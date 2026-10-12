@@ -1,7 +1,7 @@
 model,val_auc,val_log_loss
-all features,0.716,0.3775
-without role,0.716,0.3841
-without tenure,0.7179,0.3763
+all features,0.7613,0.3604
+without role,0.7387,0.3709
+without tenure,0.7465,0.3617
 without screen_time,0.682,0.4051
-without characters,0.7081,0.3848
-without context,0.717,0.3999
+without characters,0.7525,0.3753
+without context,0.7436,0.3776

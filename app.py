@@ -193,7 +193,10 @@ def loss_plot():
 
 def metrics_table(split):
     if split not in INFO["metrics"]:
-        return pd.DataFrame({"note": ["Metrics are reported for val and test only."]})
+        return pd.DataFrame({"note": [
+            "The final models were refit on train + val (seasons 1-37), so "
+            "only test gives an honest score. Plots for train/val show "
+            "in-sample fit."]})
     parts = []
     for key, label in [("threshold_0.5", "0.5"),
                        ("chosen_threshold", f"{THRESHOLD} (chosen on val)")]:
@@ -476,7 +479,9 @@ with gr.Blocks(title="SNL cast renewal") as demo:
         gr.Markdown(
             f"**C** = {INFO['chosen_C']} &nbsp;·&nbsp; **lr** = {INFO['chosen_lr']}"
             f" &nbsp;·&nbsp; **baseline** always predicts the training renewal "
-            f"rate ({INFO['baseline_rate']:.2f})")
+            f"rate ({INFO['baseline_rate']:.2f}) &nbsp;·&nbsp; final models "
+            f"trained on seasons 1–37, threshold set by walk-forward "
+            f"validation")
 
     with gr.Tab("Model comparison"):
         metrics = gr.Dataframe(label="Metrics at threshold 0.5")
