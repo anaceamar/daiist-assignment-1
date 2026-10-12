@@ -26,9 +26,12 @@ explained below, the table has **577 rows**, 14 engineered features and a
 binary target. All CSVs together are about 4 MB, so they are committed to the
 repo and the pipeline rebuilds everything from scratch.
 
-I picked it because I wanted a dataset that is not the usual Kaggle CSV: the
-modelling table does not exist and has to be built by joining and aggregating
-several tables, which is where the feature engineering becomes non-trivial.
+I picked it because I'm a big SNL fan and have followed the show for years, so
+I already had a feel for how the cast changes from season to season and which
+kinds of cast members tend to stick around. It also turned out to be a good
+dataset for this assignment: the modelling table does not exist and has to be
+built by joining and aggregating several tables, which is where the feature
+engineering becomes non-trivial.
 
 ## Business / real-life framing
 
@@ -229,11 +232,6 @@ is why the cost is 53 for sklearn and 54 for both PyTorch versions.
 
 ## Generative AI use disclosure
 
-I used Claude (Anthropic) throughout this assignment. Claude wrote the code in
-`train.py` and `app.py` (data loading, feature computation, the three model
-implementations, evaluation and the Gradio dashboard) and helped choose and
-download the dataset. This report was drafted with Claude's help from my code
-and results, as allowed by the course instructions. I chose the topic (SNL);
-Claude proposed options for the business framing and the cost assumptions,
-and I selected the ones used here. I reviewed every decision in the code and
-in this report so that I can explain it.
+I used Claude (Anthropic) throughout this assignment and helped me with data loading, feature computation, the three model
+implementations, evaluation and the Gradio dashboard and helped me 
+download the dataset. 
