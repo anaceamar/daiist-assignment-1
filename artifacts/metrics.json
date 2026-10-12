@@ -1,0 +1,188 @@
+{
+  "features": [
+    "featured",
+    "update_anchor",
+    "joined_mid_season",
+    "prior_seasons",
+    "stuck_featured",
+    "apps_relative",
+    "apps_relative_change",
+    "cold_open_per_episode",
+    "update_per_episode",
+    "log_characters",
+    "log_impressions",
+    "cast_size",
+    "recent_renewal_rate"
+  ],
+  "target": "renewed",
+  "baseline_rate": 0.7381615598885793,
+  "chosen_C": 10.0,
+  "chosen_lr": 0.5,
+  "chosen_threshold": 0.7,
+  "cost_missed_departure": 3.0,
+  "cost_false_alarm": 1.0,
+  "val_log_loss_by_C": {
+    "0.01": 0.41570905617422166,
+    "0.1": 0.38484919722005834,
+    "1.0": 0.3781404814670712,
+    "10.0": 0.3775304756737481
+  },
+  "metrics": {
+    "val": {
+      "threshold_0.5": {
+        "baseline": {
+          "accuracy": 0.8571,
+          "balanced_accuracy": 0.5,
+          "recall_departures": 0.0,
+          "precision_departures": 0.0,
+          "log_loss": 0.4517,
+          "cost": 39.0,
+          "roc_auc": 0.5
+        },
+        "sklearn": {
+          "accuracy": 0.8352,
+          "balanced_accuracy": 0.5192,
+          "recall_departures": 0.0769,
+          "precision_departures": 0.25,
+          "log_loss": 0.3775,
+          "cost": 39.0,
+          "roc_auc": 0.716
+        },
+        "manual_torch": {
+          "accuracy": 0.8352,
+          "balanced_accuracy": 0.5192,
+          "recall_departures": 0.0769,
+          "precision_departures": 0.25,
+          "log_loss": 0.3775,
+          "cost": 39.0,
+          "roc_auc": 0.717
+        },
+        "torch_module": {
+          "accuracy": 0.8352,
+          "balanced_accuracy": 0.5192,
+          "recall_departures": 0.0769,
+          "precision_departures": 0.25,
+          "log_loss": 0.3775,
+          "cost": 39.0,
+          "roc_auc": 0.717
+        }
+      },
+      "chosen_threshold": {
+        "baseline": {
+          "accuracy": 0.8571,
+          "balanced_accuracy": 0.5,
+          "recall_departures": 0.0,
+          "precision_departures": 0.0,
+          "log_loss": 0.4517,
+          "cost": 39.0,
+          "roc_auc": 0.5
+        },
+        "sklearn": {
+          "accuracy": 0.8022,
+          "balanced_accuracy": 0.6282,
+          "recall_departures": 0.3846,
+          "precision_departures": 0.3333,
+          "log_loss": 0.3775,
+          "cost": 34.0,
+          "roc_auc": 0.716
+        },
+        "manual_torch": {
+          "accuracy": 0.8022,
+          "balanced_accuracy": 0.6282,
+          "recall_departures": 0.3846,
+          "precision_departures": 0.3333,
+          "log_loss": 0.3775,
+          "cost": 34.0,
+          "roc_auc": 0.717
+        },
+        "torch_module": {
+          "accuracy": 0.8022,
+          "balanced_accuracy": 0.6282,
+          "recall_departures": 0.3846,
+          "precision_departures": 0.3333,
+          "log_loss": 0.3775,
+          "cost": 34.0,
+          "roc_auc": 0.717
+        }
+      }
+    },
+    "test": {
+      "threshold_0.5": {
+        "baseline": {
+          "accuracy": 0.8661,
+          "balanced_accuracy": 0.5,
+          "recall_departures": 0.0,
+          "precision_departures": 0.0,
+          "log_loss": 0.4423,
+          "cost": 51.0,
+          "roc_auc": 0.5
+        },
+        "sklearn": {
+          "accuracy": 0.8189,
+          "balanced_accuracy": 0.5473,
+          "recall_departures": 0.1765,
+          "precision_departures": 0.25,
+          "log_loss": 0.479,
+          "cost": 51.0,
+          "roc_auc": 0.6209
+        },
+        "manual_torch": {
+          "accuracy": 0.811,
+          "balanced_accuracy": 0.5428,
+          "recall_departures": 0.1765,
+          "precision_departures": 0.2308,
+          "log_loss": 0.4791,
+          "cost": 52.0,
+          "roc_auc": 0.6219
+        },
+        "torch_module": {
+          "accuracy": 0.811,
+          "balanced_accuracy": 0.5428,
+          "recall_departures": 0.1765,
+          "precision_departures": 0.2308,
+          "log_loss": 0.4791,
+          "cost": 52.0,
+          "roc_auc": 0.6219
+        }
+      },
+      "chosen_threshold": {
+        "baseline": {
+          "accuracy": 0.8661,
+          "balanced_accuracy": 0.5,
+          "recall_departures": 0.0,
+          "precision_departures": 0.0,
+          "log_loss": 0.4423,
+          "cost": 51.0,
+          "roc_auc": 0.5
+        },
+        "sklearn": {
+          "accuracy": 0.5669,
+          "balanced_accuracy": 0.6257,
+          "recall_departures": 0.7059,
+          "precision_departures": 0.1935,
+          "log_loss": 0.479,
+          "cost": 65.0,
+          "roc_auc": 0.6209
+        },
+        "manual_torch": {
+          "accuracy": 0.5669,
+          "balanced_accuracy": 0.6257,
+          "recall_departures": 0.7059,
+          "precision_departures": 0.1935,
+          "log_loss": 0.4791,
+          "cost": 65.0,
+          "roc_auc": 0.6219
+        },
+        "torch_module": {
+          "accuracy": 0.5669,
+          "balanced_accuracy": 0.6257,
+          "recall_departures": 0.7059,
+          "precision_departures": 0.1935,
+          "log_loss": 0.4791,
+          "cost": 65.0,
+          "roc_auc": 0.6219
+        }
+      }
+    }
+  }
+}
